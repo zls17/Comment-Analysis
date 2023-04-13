@@ -12,6 +12,13 @@ from dotenv import load_dotenv
 from googleapiclient.discovery import build
 import pandas as pd
 import csv
+from nltk.sentiment import SentimentIntensityAnalyzer
+import pyqtgraph as pg
+from PyQt5.QtChart import (QChart, QChartView, QPieSeries, 
+                           QPieSlice)
+from PyQt5.QtGui import QPainter
+import random
+# from nltk.sentiment import SentimentIntensityAnalyzer
 
 
 class TableModel(QtCore.QAbstractTableModel):
@@ -24,9 +31,7 @@ class TableModel(QtCore.QAbstractTableModel):
         if role == Qt.ItemDataRole.DisplayRole:
             value = self._data.iloc[index.row(), index.column()]
             return str(value)
-
-        # if role == Qt.ItemDataRole.FontRole:
-        #     return QFont("Arial", 18)
+            
 
     def rowCount(self, index):
         return self._data.shape[0]
@@ -101,6 +106,86 @@ class MainWindow(QMainWindow):
             for comment in self.comments:
                 file.write(f"{comment}\n")
 
+    def barChartGraph(self):
+        window = MainWindow()
+        plot = pg.plot()
+        y = [self.positive_count, self.negative_count, self.neutral_count]
+        x = [1, 2, 3]
+        bargraph = pg.BarGraphItem(x = x, height = y, width = 0.5, brush = 'g')
+        plot.addItem(bargraph)
+        plot.setBackground('w')
+        plot.setLabel('left', "Number of Comments")
+        window.show()
+
+
+
+    def pieChartGraph(self):
+        series = QPieSeries()
+        series.append("Positive", self.positive_count)
+        series.append("Negative", self.negative_count)
+        series.append("Neutral", self.neutral_count)
+
+        slice = QPieSlice()
+        positiveSlice = QPieSlice()
+        positiveSlice = series.slices()[0]
+        positiveSlice.setLabelVisible(True)
+
+        negativeSlice = QPieSlice()
+        negativeSlice = series.slices()[1]
+        negativeSlice.setLabelVisible(True)
+
+        neutralSlice = QPieSlice()
+        neutralSlice = series.slices()[2]
+        neutralSlice.setLabelVisible(True)
+        chart = QChart()
+        
+        chart.addSeries(series)
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.setTitle("Comment Pie Chart")
+        chartview = QChartView(chart)
+        chartview.setRenderHint(QPainter.Antialiasing)
+        self.chartBack = QPushButton("Back")
+        layout = QVBoxLayout()
+        layout.addWidget(chartview)
+        layout.addWidget(self.chartBack)
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.chartBack.pressed.connect(self.sentiment)
+        self.setCentralWidget(widget)
+        
+        # self.setCentralWidget(chartview)
+
+    def sentiment(self):
+        sia = SentimentIntensityAnalyzer()
+        self.positive_count = 0
+        self.negative_count = 0
+        self.neutral_count = 0
+        for comment in self.comments:
+            if sia.polarity_scores(comment)['compound'] >= 0.05:
+                self.positive_count += 1
+            elif sia.polarity_scores(comment)['compound'] <= -0.05:
+                self.negative_count += 1
+            else:
+                self.neutral_count += 1
+            
+        loadUi("sentimentUI.ui", self)
+        self.totalComments.setText(str(len(self.comments)))
+        self.positiveComments.setText(str(self.positive_count))
+        self.negativeComments.setText(str(self.negative_count))
+        self.neutralComments.setText(str(self.neutral_count))
+        
+        if self.positive_count > 2 * self.negative_count:
+            self.descriptionLabel.setText("Overall, the video was well received.")
+        elif self.negative_count > self.positive_count:
+            self.descriptionLabel.setText("People did not like this video!")
+        else:
+            self.descriptionLabel.setText("It wasn't good but not bad either")
+
+        self.backButton.pressed.connect(self.youtubeAnalysis)
+        self.pieChart.pressed.connect(self.pieChartGraph)
+        self.barGraph.pressed.connect(self.barChartGraph)
+
+        
 
     def youtubeAnalysis(self):
         load_dotenv()
@@ -126,13 +211,17 @@ class MainWindow(QMainWindow):
             self.table.setColumnWidth(0, 10000)
             self.saveButton = QPushButton("Save")
             self.analyseButton = QPushButton("Analyse")
+            self.homeButton = QPushButton("Home")
             layout = QVBoxLayout()
             layout.addWidget(self.table)
             layout.addWidget(self.saveButton)
             layout.addWidget(self.analyseButton)
+            layout.addWidget(self.homeButton)
             widget = QWidget()
             widget.setLayout(layout)
             self.saveButton.pressed.connect(self.save)
+            self.analyseButton.pressed.connect(self.sentiment)
+            self.homeButton.pressed.connect(self.youtubeUI)
             self.setCentralWidget(widget)
 
 
@@ -155,16 +244,6 @@ class MainWindow(QMainWindow):
             # print(url_to_id("https://www.youtube.com/watch?v=XTjtPc0uiG8&ab_channel=SamuelChan"))
 
         comment_threads(url_to_id(self.videoLink))
-
-
-
-
-    # def twitterUI(self):
-    #     loadUi("twitterUI.ui", self)
-    #     layout = QGridLayout()
-    #     self.
-
-
 
 app = QApplication([])
 window = MainWindow()
