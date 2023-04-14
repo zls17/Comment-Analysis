@@ -18,6 +18,7 @@ from PyQt5.QtChart import (QChart, QChartView, QPieSeries,
                            QPieSlice)
 from PyQt5.QtGui import QPainter
 import random
+import praw
 # from nltk.sentiment import SentimentIntensityAnalyzer
 
 
@@ -65,10 +66,13 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
         self.youtubeButton.clicked.connect(self.youtubeUI)
+        self.redditButton.clicked.connect(self.redditUI)
         self.show()
-    
+
+
     def youtubeUI(self):
         loadUi("youtubeUI.ui", self)
+        self.current = 0
         layout = QGridLayout()
         self.linkLabel = QLabel("Enter the video link")
         self.linkEntry = QLineEdit()
@@ -81,7 +85,7 @@ class MainWindow(QMainWindow):
         self.numberCommentsLabel = QLabel("Enter Number of Comments to retrieve")
         self.numberCommentsEntry = QLineEdit()
         self.linkEntry.textChanged.connect(self.getYoutubeLink)
-        self.analyseButton.clicked.connect(self.youtubeAnalysis)
+        self.analyseButton.clicked.connect(self.youtubeAnalysis)        
         self.numberCommentsEntry.textChanged.connect(self.getNumberComments)
         layout.addWidget(self.linkLabel, 0, 0)
         layout.addWidget(self.linkEntry, 0, 1)
@@ -93,6 +97,19 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
         self.show()
+    
+    def redditUI(self):
+        loadUi("redditUI.ui", self)
+        self.current = 1
+        self.redditUrlEntry.textChanged.connect(self.getRedditLink)
+        self.redditCommentsEntry.textChanged.connect(self.getRedditComments)
+        self.redditAnalyseButton.clicked.connect(self.redditAnalyse)
+
+    def getRedditComments(self, number):
+        self.redditComments = int(number)
+    
+    def getRedditLink(self, link):
+        self.redditLink = link
 
     def getNumberComments(self, number):
         self.number = int(number)
@@ -175,16 +192,59 @@ class MainWindow(QMainWindow):
         self.neutralComments.setText(str(self.neutral_count))
         
         if self.positive_count > 2 * self.negative_count:
-            self.descriptionLabel.setText("Overall, the video was well received.")
+            self.descriptionLabel.setText("Overall, the video/post was well received.")
         elif self.negative_count > self.positive_count:
-            self.descriptionLabel.setText("People did not like this video!")
+            self.descriptionLabel.setText("People did not like this video/post!")
         else:
             self.descriptionLabel.setText("It wasn't good but not bad either")
-
-        self.backButton.pressed.connect(self.youtubeAnalysis)
+        
+        if self.current == 1:
+            self.backButton.pressed.connect(self.redditAnalyse)
+        else:
+            self.backButton.pressed.connect(self.youtubeAnalysis)
         self.pieChart.pressed.connect(self.pieChartGraph)
         self.barGraph.pressed.connect(self.barChartGraph)
 
+
+    def redditAnalyse(self):
+        load_dotenv()
+        client_id = os.getenv("client_id")
+        client_secret = os.getenv("client_secret")
+        username = os.getenv("username")
+        password = os.getenv("password")
+        reddit = praw.Reddit(client_id = client_id,
+                                client_secret = client_secret,
+                                username = username,
+                                password = password,
+                                user_agent = "comments")
+
+        url = self.redditLink
+        submission = reddit.submission(url = url)
+        submission.comments.replace_more(limit=0)
+        self.comments = []
+        for top_level_comment in submission.comments[:int(self.redditComments)]:
+            self.comments.append(top_level_comment.body)
+
+        self.df = pd.DataFrame(self.comments)
+
+        self.table = QtWidgets.QTableView()
+        self.model = TableModel(self.df)
+        self.table.setModel(self.model)
+        self.table.setColumnWidth(0, 10000)
+        self.saveButton = QPushButton("Save")
+        self.analyseButton = QPushButton("Analyse")
+        self.homeButton = QPushButton("Home")
+        layout = QVBoxLayout()
+        layout.addWidget(self.table)
+        layout.addWidget(self.saveButton)
+        layout.addWidget(self.analyseButton)
+        layout.addWidget(self.homeButton)
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.saveButton.pressed.connect(self.save)
+        self.analyseButton.pressed.connect(self.sentiment)
+        self.homeButton.pressed.connect(self.redditUI)
+        self.setCentralWidget(widget)
         
 
     def youtubeAnalysis(self):
@@ -224,7 +284,7 @@ class MainWindow(QMainWindow):
             self.homeButton.pressed.connect(self.youtubeUI)
             self.setCentralWidget(widget)
 
-
+                
 
         def url_to_id(url):
             #https://www.youtube.com/watch?v=SwSbnmqk3zY&ab_channel=techTFQ
@@ -243,6 +303,7 @@ class MainWindow(QMainWindow):
 
             # print(url_to_id("https://www.youtube.com/watch?v=XTjtPc0uiG8&ab_channel=SamuelChan"))
 
+        
         comment_threads(url_to_id(self.videoLink))
 
 app = QApplication([])
