@@ -210,11 +210,11 @@ class MainWindow(QMainWindow):
         load_dotenv()
         client_id = os.getenv("client_id")
         client_secret = os.getenv("client_secret")
-        username = os.getenv("username")
+        username_here = os.getenv("username_here")
         password = os.getenv("password")
         reddit = praw.Reddit(client_id = client_id,
                                 client_secret = client_secret,
-                                username = username,
+                                username = username_here,
                                 password = password,
                                 user_agent = "comments")
 
