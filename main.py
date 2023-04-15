@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
         self.youtubeButton.clicked.connect(self.youtubeUI)
         self.redditButton.clicked.connect(self.redditUI)
+        self.resize(500, 500)
         self.show()
 
 
