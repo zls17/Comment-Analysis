@@ -9,7 +9,6 @@ from googleapiclient.discovery import build
 import pandas as pd 
 import os
 from dotenv import load_dotenv
-from googleapiclient.discovery import build
 import pandas as pd
 import csv
 from nltk.sentiment import SentimentIntensityAnalyzer
@@ -19,6 +18,7 @@ from PyQt5.QtChart import (QChart, QChartView, QPieSeries,
 from PyQt5.QtGui import QPainter
 import random
 import praw
+import snscrape.modules.twitter as twitter
 # from nltk.sentiment import SentimentIntensityAnalyzer
 
 
@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
         self.youtubeButton.clicked.connect(self.youtubeUI)
         self.redditButton.clicked.connect(self.redditUI)
+        self.twitterButton.clicked.connect(self.twitterUI)
         self.resize(500, 500)
         self.show()
 
@@ -106,6 +107,15 @@ class MainWindow(QMainWindow):
         self.redditCommentsEntry.textChanged.connect(self.getRedditComments)
         self.redditAnalyseButton.clicked.connect(self.redditAnalyse)
 
+    def twitterUI(self):
+        loadUi("twitterUI.ui", self)
+        self.current = 2
+        self.state = 0
+        self.twitterHashtag.textChanged.connect(self.getTwitterHashTag)
+        self.twitterUsername.textChanged.connect(self.getTwitterUserName)
+        self.twitterNumbertweets.textChanged.connect(self.getTwitterNumberTweets)
+        self.twitterAnalyseButton.clicked.connect(self.twitterAnalyse)
+
     def getRedditComments(self, number):
         self.redditComments = int(number)
     
@@ -114,11 +124,20 @@ class MainWindow(QMainWindow):
 
     def getNumberComments(self, number):
         self.number = int(number)
-        
 
     def getYoutubeLink(self, link):
         self.videoLink = link
     
+    def getTwitterHashTag(self, hashtag):
+        self.hashtag = hashtag
+    
+    def getTwitterUserName(self, username):
+        self.state = 1
+        self.username = username
+
+    def getTwitterNumberTweets(self, number):
+        self.twitterNumber = int(number)
+
     def save(self):
         with open("output.txt", 'w') as file:
             for comment in self.comments:
@@ -193,19 +212,52 @@ class MainWindow(QMainWindow):
         self.neutralComments.setText(str(self.neutral_count))
         
         if self.positive_count > 2 * self.negative_count:
-            self.descriptionLabel.setText("Overall, the video/post was well received.")
+            self.descriptionLabel.setText("Overall, the video/post/tweet was positive")
         elif self.negative_count > self.positive_count:
-            self.descriptionLabel.setText("People did not like this video/post!")
+            self.descriptionLabel.setText("This video/post/tweet was negative!")
         else:
-            self.descriptionLabel.setText("It wasn't good but not bad either")
+            self.descriptionLabel.setText("It wasn't good but not bad either.")
         
         if self.current == 1:
             self.backButton.pressed.connect(self.redditAnalyse)
+        elif self.current == 2:
+            self.backButton.pressed.connect(self.twitterAnalyse)
         else:
             self.backButton.pressed.connect(self.youtubeAnalysis)
         self.pieChart.pressed.connect(self.pieChartGraph)
         self.barGraph.pressed.connect(self.barChartGraph)
 
+    def twitterAnalyse(self):
+        if self.state == 0:
+            query = f"#{self.hashtag}"
+        elif self.state == 1:
+            query = f"from:{self.username}"
+
+        scraper = twitter.TwitterSearchScraper(query = query)
+        self.comments = []
+        for tweet in scraper.get_items():
+            self.comments.append(tweet.rawContent)
+            if len(self.comments) > self.twitterNumber:
+                break
+        self.twitterData = pd.DataFrame(self.comments)
+        self.table = QtWidgets.QTableView()
+        self.model = TableModel(self.twitterData)
+        self.table.setModel(self.model)
+        self.table.setColumnWidth(0, 10000)
+        self.saveButton = QPushButton("Save")
+        self.analyseButton = QPushButton("Analyse")
+        self.homeButton = QPushButton("Home")
+        layout = QVBoxLayout()
+        layout.addWidget(self.table)
+        layout.addWidget(self.saveButton)
+        layout.addWidget(self.analyseButton)
+        layout.addWidget(self.homeButton)
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.saveButton.pressed.connect(self.save)
+        self.analyseButton.pressed.connect(self.sentiment)
+        self.homeButton.pressed.connect(self.twitterUI)
+        self.setCentralWidget(widget)
 
     def redditAnalyse(self):
         load_dotenv()
