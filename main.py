@@ -19,6 +19,7 @@ from PyQt5.QtGui import QPainter
 import random
 import praw
 import snscrape.modules.twitter as twitter
+import snscrape
 # from nltk.sentiment import SentimentIntensityAnalyzer
 
 
@@ -233,7 +234,7 @@ class MainWindow(QMainWindow):
         elif self.state == 1:
             query = f"from:{self.username}"
 
-        scraper = twitter.TwitterSearchScraper(query = query)
+        scraper = twitter.TwitterSearchScraper(query = query, mode = snscrape.modules.twitter.TwitterSearchScraperMode.TOP)
         self.comments = []
         for tweet in scraper.get_items():
             self.comments.append(tweet.rawContent)
