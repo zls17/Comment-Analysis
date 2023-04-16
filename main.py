@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QApplication, QPushButton, QMainWindow,
                              QVBoxLayout, QWidget, QGridLayout, QLabel,
-                             QLineEdit)
+                             QLineEdit, QFileDialog)
 from PyQt5.uic import loadUi
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QSize
@@ -140,9 +140,15 @@ class MainWindow(QMainWindow):
         self.twitterNumber = int(number)
 
     def save(self):
-        with open("output.txt", 'w') as file:
-            for comment in self.comments:
-                file.write(f"{comment}\n")
+        # options = QFileDialog.Options()
+        # options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getSaveFileName(self,"QFileDialog.getSaveFileName()","","All Files (*);;Text Files (*.txt)")
+        name = fileName
+        file = open(name, 'w', encoding='utf-8')
+        for comment in self.comments:
+            file.write(f"{comment}\n\n")
+        file.close()
+                
 
     def barChartGraph(self):
         window = MainWindow()
