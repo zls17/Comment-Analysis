@@ -21,6 +21,7 @@
 - Enter the number of comments to be retrieved.
 - Click on Analyse
 
+#### Update
 * A third party api was used to scrape tweets, due to some changes made by Twitter, the twitter part of the application may not work.
 * Reddit also made some changes with their API, the code hasn't been updated since then, so reddit part of the application may not work.
   
