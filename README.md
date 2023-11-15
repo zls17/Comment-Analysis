@@ -11,6 +11,14 @@
 - Enter the URL of the video in the URL Field.
 - Enter the number of comments to be retrieved.
 - Click on Analyse.
+>
+> ![](Pictures/1.png)
+>
+> ![](Pictures/2.png)
+>
+> ![](Pictures/3.png)
+>
+> ![](Pictures/4.png)
 #### For Twitter
 - Enter Username or twitter hashtag (eg. #news).
 - Enter the number of tweets to be retrieved.
